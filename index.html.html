@@ -1,0 +1,197 @@
+<meta name='viewport' content='width=device-width, initial-scale=1'/><!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A K Khan 841424 - Exam Portal</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        :root { --p: #1a237e; --s: #cddc39; --bg: #f5f5f5; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; display: flex; justify-content: center; min-height: 100vh; padding: 10px; }
+        .card { width: 100%; max-width: 650px; background: white; border-radius: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.1); overflow: hidden; height: fit-content; margin-top: 20px; border: 1px solid #ddd; }
+        .header { background: var(--p); color: white; padding: 20px; text-align: center; border-bottom: 5px solid var(--s); }
+        .stats-bar { display: flex; justify-content: space-between; background: #fffde7; padding: 12px 20px; font-weight: bold; font-size: 14px; border-bottom: 1px solid #eee; }
+        .content { padding: 25px; }
+        .hidden { display: none; }
+        input, select { width: 100%; padding: 12px; margin: 10px 0; border: 2px solid #ddd; border-radius: 12px; font-size: 16px; box-sizing: border-box; }
+        .btn-main { background: var(--p); color: white; width: 100%; padding: 15px; border: none; border-radius: 12px; font-size: 18px; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        .btn-main:hover { opacity: 0.9; transform: translateY(-2px); }
+        .nav-btns { display: flex; justify-content: space-between; margin-top: 25px; gap: 10px; }
+        .btn-nav { background: #455a64; color: white; flex: 1; padding: 12px; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; }
+        .option { display: block; padding: 15px; background: #fafafa; margin: 10px 0; border: 2px solid #eee; border-radius: 12px; cursor: pointer; transition: 0.2s; }
+        .selected { border-color: var(--p); background: #e8eaf6; font-weight: bold; }
+        #timer { color: #b71c1c; font-size: 16px; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <div class="header">
+        <h1 style="margin:0; letter-spacing: 2px;">A K Khan</h1>
+        <p style="margin:5px 0; font-weight: bold; opacity: 0.9;">841424</p>
+    </div>
+
+    <div id="statsBar" class="stats-bar hidden">
+        <span id="timer">Time Left: 60:00</span>
+        <span id="attemptCount" style="color: #1a237e;">Done: 0/50</span>
+    </div>
+
+    <div class="content">
+        <div id="loginBox">
+            <h3 style="text-align:center; color:#333;">Student Verification</h3>
+            <input type="text" id="name" placeholder="Enter Full Name">
+            <select id="cls">
+                <option value="10">Class 10</option>
+                <option value="9">Class 9</option>
+                <option value="8">Class 8</option>
+            </select>
+            <input type="password" id="pass" placeholder="Enter Exam Password">
+            <button class="btn-main" onclick="login()">Start Assessment</button>
+        </div>
+
+        <div id="quizBox" class="hidden">
+            <div id="qWrap">
+                <h3 id="enQ" style="color:#1a237e;"></h3>
+                <p id="hiQ" style="color:#666; font-style:italic; padding:10px; background:#f9f9f9; border-radius:8px;"></p>
+                <div id="opts"></div>
+            </div>
+            <div class="nav-btns">
+                <button class="btn-nav" id="prevBtn" onclick="changeQ(-1)">← Back</button>
+                <button class="btn-nav" id="nextBtn" onclick="changeQ(1)">Next →</button>
+            </div>
+            <button class="btn-main" style="background:#bf360c; margin-top:25px;" onclick="confirmSubmit()">FINAL SUBMIT</button>
+        </div>
+
+        <div id="resBox" class="hidden" style="text-align:center;">
+            <p style="font-size:18px; color:#666;">Assessment Complete</p>
+            <h1 style="font-size:50px; color:var(--p); margin:10px 0;" id="scoreDisp"></h1>
+            <button class="btn-main" onclick="downloadPDF()">Download PDF Report</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Password is hidden here (A K Khan Security)
+    const _KEY = "2011"; 
+    
+    const questions = [
+        {en:"Who is the Missile Man of India?", hi:"भारत का मिसाइल मैन कौन है?", o:["C.V. Raman","Homi Bhabha","A.P.J. Abdul Kalam","Vikram Sarabhai"], a:2},
+        {en:"Which planet is the largest?", hi:"सबसे बड़ा ग्रह कौन सा है?", o:["Earth","Jupiter","Mars","Saturn"], a:1},
+        {en:"National Anthem was written by?", hi:"राष्ट्रगान किसने लिखा?", o:["Bankim Chandra","Rabindranath Tagore","Gandhi","Nehru"], a:1},
+        {en:"Gas released by plants?", hi:"पौधों द्वारा छोड़ी जाने वाली गैस?", o:["CO2","Nitrogen","Oxygen","Hydrogen"], a:2},
+        {en:"First Woman PM of India?", hi:"भारत की पहली महिला प्रधानमंत्री?", o:["Pratibha Patil","Indira Gandhi","Kiran Bedi","Sonia Gandhi"], a:1},
+        {en:"Longest river in the world?", hi:"विश्व की सबसे लंबी नदी?", o:["Amazon","Ganga","Nile","Mississippi"], a:2},
+        {en:"Capital of Bihar?", hi:"बिहार की राजधानी क्या है?", o:["Gaya","Patna","Bhagalpur","Munger"], a:1},
+        {en:"Blood purifying organ?", hi:"रक्त शुद्ध करने वाला अंग?", o:["Heart","Lungs","Kidney","Liver"], a:2},
+        {en:"Author of Discovery of India?", hi:"डिस्कवरी ऑफ इंडिया के लेखक?", o:["Gandhi","Nehru","Patel","Ambedkar"], a:1},
+        {en:"Red Planet is?", hi:"लाल ग्रह कौन सा है?", o:["Venus","Mars","Jupiter","Mercury"], a:1},
+        {en:"Total States in India?", hi:"भारत में कितने राज्य हैं?", o:["27","28","29","30"], a:1},
+        {en:"Smallest continent?", hi:"सबसे छोटा महाद्वीप?", o:["Asia","Europe","Australia","Africa"], a:2},
+        {en:"Light Bulb inventor?", hi:"बिजली बल्ब के आविष्कारक?", o:["Newton","Einstein","Edison","Tesla"], a:2},
+        {en:"Vitamin in Citrus fruits?", hi:"खट्टे फलों में विटामिन?", o:["Vit A","Vit B","Vit C","Vit D"], a:2},
+        {en:"Boiling point of water?", hi:"पानी का क्वथनांक?", o:["90°C","100°C","110°C","120°C"], a:1},
+        {en:"Lead actor in 'Super 30'?", hi:"'सुपर 30' के मुख्य अभिनेता?", o:["Salman","Hrithik Roshan","Akshay","Aamir"], a:1},
+        {en:"Pink City is?", hi:"गुलाबी शहर कौन सा है?", o:["Jaipur","Udaipur","Delhi","Mumbai"], a:0},
+        {en:"Brain of Computer?", hi:"कंप्यूटर का दिमाग?", o:["RAM","CPU","Monitor","Disk"], a:1},
+        {en:"Bihar Day date?", hi:"बिहार दिवस की तारीख?", o:["22 March","15 August","26 Jan","1 May"], a:0},
+        {en:"Iron Man of India?", hi:"भारत का लौह पुरुष?", o:["Bose","Gandhi","Sardar Patel","Nehru"], a:2},
+        {en:"Largest Ocean?", hi:"सबसे बड़ा महासागर?", o:["Indian","Pacific","Atlantic","Arctic"], a:1},
+        {en:"Naatu Naatu movie?", hi:"नाटू नाटू वाली फिल्म?", o:["Pushpa","Jawan","RRR","Pathaan"], a:2},
+        {en:"Bones in adult human?", hi:"वयस्क मनुष्य में हड्डियाँ?", o:["204","206","208","210"], a:1},
+        {en:"Ship of the Desert?", hi:"रेगिस्तान का जहाज?", o:["Horse","Elephant","Camel","Donkey"], a:2},
+        {en:"Telephone inventor?", hi:"टेलीफोन के आविष्कारक?", o:["Edison","Graham Bell","Newton","Marconi"], a:1},
+        {en:"Tallest mountain?", hi:"सबसे ऊँचा पर्वत?", o:["K2","Mt. Everest","Lhotse","Kanchenjunga"], a:1},
+        {en:"Water formula?", hi:"पानी का सूत्र?", o:["CO2","H2O","O2","NaCl"], a:1},
+        {en:"Blue Planet is?", hi:"नीला ग्रह कौन सा है?", o:["Earth","Neptune","Uranus","Venus"], a:0},
+        {en:"Constitution writer?", hi:"संविधान लेखक?", o:["Nehru","Ambedkar","Gandhi","Prasad"], a:1},
+        {en:"Festival of Lights?", hi:"रोशनी का त्यौहार?", o:["Holi","Diwali","Eid","Xmas"], a:1},
+        {en:"National Bird of India?", hi:"भारत का राष्ट्रीय पक्षी?", o:["Eagle","Parrot","Peacock","Sparrow"], a:2},
+        {en:"Largest Desert?", hi:"सबसे बड़ा रेगिस्तान?", o:["Thar","Gobi","Sahara","Kalahari"], a:2},
+        {en:"First Indian in Space?", hi:"अंतरिक्ष में पहले भारतीय?", o:["Kalpana","Rakesh Sharma","Sunita","Vikram"], a:1},
+        {en:"Gas for breathing?", hi:"साँस के लिए गैस?", o:["Nitrogen","Oxygen","CO2","Argon"], a:1},
+        {en:"King of Bollywood?", hi:"बॉलीवुड का किंग?", o:["Salman","Aamir","Shah Rukh Khan","Akshay"], a:2},
+        {en:"Taj Mahal state?", hi:"ताजमहल का राज्य?", o:["Delhi","Uttar Pradesh","Bihar","Punjab"], a:1},
+        {en:"Smallest country?", hi:"सबसे छोटा देश?", o:["Monaco","Vatican City","Maldives","Bhutan"], a:1},
+        {en:"Current PM of India?", hi:"भारत के वर्तमान PM?", o:["Rahul","Narendra Modi","Amit Shah","Nitish"], a:1},
+        {en:"Organ for taste?", hi:"स्वाद के लिए अंग?", o:["Nose","Skin","Tongue","Eyes"], a:2},
+        {en:"National Flower?", hi:"राष्ट्रीय फूल?", o:["Rose","Lotus","Sunflower","Lily"], a:1},
+        {en:"Largest Bone?", hi:"सबसे बड़ी हड्डी?", o:["Femur","Stapes","Ribs","Skull"], a:0},
+        {en:"Titanic Director?", hi:"टाइटैनिक के डायरेक्टर?", o:["Spielberg","James Cameron","Nolan","Snyder"], a:1},
+        {en:"Rainbow top color?", hi:"इंद्रधनुष का ऊपरी रंग?", o:["Violet","Green","Red","Yellow"], a:2},
+        {en:"Total Continents?", hi:"कुल महाद्वीप?", o:["5","6","7","8"], a:2},
+        {en:"Underground plant part?", hi:"जमीन के नीचे वाला भाग?", o:["Leaf","Stem","Root","Flower"], a:2},
+        {en:"Capital city of India?", hi:"भारत की राजधानी?", o:["Mumbai","New Delhi","Kolkata","Chennai"], a:1},
+        {en:"Actor in Dangal?", hi:"दंगल का अभिनेता?", o:["Salman","Aamir Khan","Shahrukh","Akshay"], a:1},
+        {en:"Fastest land animal?", hi:"सबसे तेज जमीन वाला जानवर?", o:["Tiger","Cheetah","Lion","Horse"], a:1},
+        {en:"Who invented Zero?", hi:"शून्य का आविष्कार किसने किया?", o:["Aryabhatta","Bhaskara","Newton","Einstein"], a:0},
+        {en:"Planet with Rings?", hi:"छल्ले वाला ग्रह?", o:["Mars","Jupiter","Saturn","Uranus"], a:2}
+    ];
+
+    let current = 0, userAns = new Array(50).fill(null), timeLeft = 3600, timerId, sName, sClass;
+
+    function login() {
+        if(document.getElementById('pass').value !== _KEY) return alert("Access Denied!");
+        sName = document.getElementById('name').value; sClass = document.getElementById('cls').value;
+        if(!sName) return alert("Enter Name");
+        document.getElementById('loginBox').classList.add('hidden');
+        document.getElementById('quizBox').classList.remove('hidden');
+        document.getElementById('statsBar').classList.remove('hidden');
+        startTimer(); showQ();
+    }
+
+    function startTimer() {
+        timerId = setInterval(() => {
+            timeLeft--;
+            let m = Math.floor(timeLeft/60), s = timeLeft%60;
+            document.getElementById('timer').innerText = `Time Left: ${m}:${s<10?'0'+s:s}`;
+            if(timeLeft<=0) finishExam();
+        }, 1000);
+    }
+
+    function showQ() {
+        const q = questions[current];
+        document.getElementById('enQ').innerText = `${current+1}. ${q.en}`;
+        document.getElementById('hiQ').innerText = q.hi;
+        const optDiv = document.getElementById('opts'); optDiv.innerHTML = "";
+        q.o.forEach((o, i) => {
+            const d = document.createElement('div');
+            d.className = `option ${userAns[current]===i?'selected':''}`;
+            d.innerText = o; d.onclick = () => { userAns[current]=i; updateStats(); showQ(); };
+            optDiv.appendChild(d);
+        });
+        document.getElementById('prevBtn').disabled = current===0;
+        document.getElementById('nextBtn').innerText = current===49?"Finish Assessment":"Next Question →";
+    }
+
+    function changeQ(dir) { if(current+dir>=0 && current+dir<50) { current+=dir; showQ(); } }
+    function updateStats() { document.getElementById('attemptCount').innerText = `Done: ${userAns.filter(a=>a!==null).length}/50`; }
+    function confirmSubmit() { if(confirm("Submit Assessment?")) finishExam(); }
+
+    function finishExam() {
+        clearInterval(timerId);
+        document.getElementById('quizBox').classList.add('hidden');
+        document.getElementById('resBox').classList.remove('hidden');
+        let score = 0; userAns.forEach((a,i)=>{if(a===questions[i].a) score++;});
+        document.getElementById('scoreDisp').innerText = `${score}/50`;
+    }
+
+    function downloadPDF() {
+        const { jsPDF } = window.jspdf; const doc = new jsPDF();
+        doc.setFillColor(26, 35, 126); doc.rect(0, 0, 210, 40, 'F');
+        doc.setTextColor(255); doc.setFontSize(22); doc.text("A K Khan 841424", 105, 25, {align:'center'});
+        doc.setTextColor(0); doc.setFontSize(14); doc.text(`Student: ${sName} | Class: ${sClass} | Score: ${document.getElementById('scoreDisp').innerText}`, 20, 50);
+        let y = 65;
+        questions.forEach((q, i) => {
+            if(y>270) { doc.addPage(); y=20; }
+            const isCorrect = userAns[i]===q.a;
+            doc.setTextColor(isCorrect?0:183, isCorrect?100:28, isCorrect?0:28);
+            doc.setFontSize(10); doc.text(`${i+1}. ${q.en} [${isCorrect?'CORRECT':'WRONG'}]`, 20, y);
+            y+=5; doc.setTextColor(100);
+            doc.text(`Right: ${q.o[q.a]} | You: ${userAns[i]!==null?q.o[userAns[i]]:'Skipped'}`, 25, y);
+            y+=10;
+        });
+        doc.save(`${sName}_AKK_Report.pdf`);
+    }
+</script>
+</body>
+</html>
